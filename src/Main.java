@@ -1,7 +1,7 @@
 import java.io.*;
 import java.util.StringTokenizer;
 
-/*Задание:
+/*Первоначальное Задание:
 В текстовом файле input.txt в записаны строки, в которых есть скобки.
 Удалить в каждой строке текст в одинарных скобках и эти скобки.
 Если есть вложенность, текст во вложенных скобках  не изменять.
@@ -18,60 +18,99 @@ import java.util.StringTokenizer;
 В случае возникновения ошибок при чтении или записи файлов программа выводит соответствующее сообщение об ошибке.
  */
 
+/*
+Обновлённое задание: 
+В текстовом файле input.txt содержатся строки, в которых могут присутствовать одинарные скобки. Вам необходимо:
+
+Удалить текст, находящийся внутри одинарных скобок, включая сами скобки.
+Если есть вложенные скобки, текст во вложенных скобках не должен изменяться.
+Программа должна использовать:
+String для работы с текстом.
+StringBuffer для создания очищенных строк.
+StringTokenizer для разбиения строк на токены.
+*/
 public class Main {
     public static void main(String[] args) {
-        String inputFilePath = "input.txt";
-        String outputFilePath = "output.txt";
+        BufferedReader br = null;
+        BufferedWriter bw = null;
 
         try {
-            BufferedReader br = new BufferedReader(new FileReader(inputFilePath));
-            BufferedWriter bw = new BufferedWriter(new FileWriter(outputFilePath));
+            String inputFilePath = args.length > 0 ? args[0] : "input.txt"; // Путь к входному файлу
+            File inputFile = new File(inputFilePath);
+            File outputFile = new File("output.txt"); // Путь к выходному файлу
+
+            // Проверяем, существует ли файл input.txt
+            if (!inputFile.exists()) {
+                System.out.println("Файл " + inputFile.getName() + " не найден.");
+                return;
+            }
+
+            br = new BufferedReader(new FileReader(inputFile)); // Создаем BufferedReader для чтения файла
+            bw = new BufferedWriter(new FileWriter(outputFile)); // Создаем BufferedWriter для записи в файл
 
             String line;
-            System.out.println("Содержимое входного файла:");
+            // Читаем файл построчно
             while ((line = br.readLine()) != null) {
-                System.out.println(line);
-                String cleanedLine = removeSingleBracketsContent(line);
-                bw.write(cleanedLine);
-                bw.newLine();
+                String cleanedLine = removeSingleBracketsContent(line); // Удаляем содержимое одинарных скобок
+                bw.write(cleanedLine); // Записываем очищенную строку в выходной файл
+                bw.newLine(); // Переход на новую строку
             }
-            br.close();
-            bw.close();
 
-            // Чтение содержимого выходного файла для вывода
-            System.out.println("\nОбработка завершена. Результат сохранен в " + outputFilePath);
-            System.out.println("Содержимое выходного файла:");
-            BufferedReader outputReader = new BufferedReader(new FileReader(outputFilePath));
-            while ((line = outputReader.readLine()) != null) {
-                System.out.println(line);
-            }
-            outputReader.close();
+            // Выводим содержимое входного и выходного файлов на консоль
+            System.out.println("Содержимое файла " + inputFile.getName() + ":");
+            printFileContent(inputFile);
+            System.out.println("\nСодержимое файла output.txt:");
+            printFileContent(outputFile);
         } catch (IOException e) {
-            e.printStackTrace(); // Обработка исключений, если что-то пошло не так с вводом/выводом
+            System.out.println("Ошибка: " + e.getMessage()); // Обработка исключений при чтении/записи файла
+        } finally {
+            // Закрываем BufferedReader и BufferedWriter, если они были открыты
+            try {
+                if (br != null) {
+                    br.close();
+                }
+                if (bw != null) {
+                    bw.close();
+                }
+            } catch (IOException e) {
+                System.out.println("Ошибка при закрытии файлов: " + e.getMessage());
+            }
         }
     }
 
-    private static String removeSingleBracketsContent(String line) {
-        StringBuffer result = new StringBuffer(); // Буфер для хранения очищенной строки
-        boolean inSingleQuotes = false; // Флаг для отслеживания, находимся ли мы внутри одинарных скобок
+    // Метод для удаления содержимого одинарных скобок
+    public static String removeSingleBracketsContent(String line) {
+        StringBuffer result = new StringBuffer();
+        StringTokenizer tokenizer = new StringTokenizer(line, "()"); // Разделяем строку по скобкам
+        boolean insideSingleBracket = false; // Флаг для отслеживания состояния скобок
 
-        // Используем StringTokenizer для разделения строки на токены
-        StringTokenizer tokenizer = new StringTokenizer(line, "()", true);
         while (tokenizer.hasMoreTokens()) {
-            String token = tokenizer.nextToken();
-
-            if (token.equals("(")) {
-                // Начало секции в одинарных скобках
-                inSingleQuotes = true;
-            } else if (token.equals(")")) {
-                // Конец секции в одинарных скобках
-                inSingleQuotes = false;
-            } else if (!inSingleQuotes) {
-                // Добавляем токен в результат, только если не внутри одинарных скобок
-                result.append(token);
+            String token = tokenizer.nextToken().trim(); // Получаем следующий токен и убираем пробелы
+            if (insideSingleBracket) {
+                // Если мы внутри одинарных скобок, продолжаем игнорировать токены
+                if (token.contains(")")) {
+                    insideSingleBracket = false; // Закрывающая скобка найдена
+                }
+                continue;
+            }
+            if (token.contains("(")) {
+                insideSingleBracket = true; // Открывающая скобка найдена
+                result.append(token.substring(0, token.indexOf("(")).trim()); // Добавляем текст до открывающей скобки
+            } else {
+                result.append(token); // Добавляем текущий токен
             }
         }
 
-        return result.toString();
+        return result.toString().replaceAll(" +", " ").trim(); // Убираем лишние пробелы и возвращаем результат
+    }
+
+    // Метод для вывода содержимого файла на консоль
+    public static void printFileContent(File file) throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(file));
+        String line;
+        while ((line = br.readLine()) != null) {
+            System.out.println(line); // Выводим строку на консоль
+        }
+        br.close();
     }
 }
